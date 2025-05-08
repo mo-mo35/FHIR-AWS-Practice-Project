@@ -1,0 +1,11 @@
+condition,occurrences
+"{coding=[{system=http://snomed.info/sct, code=840544004, display=Suspected COVID-19}], text=Suspected COVID-19}",44
+"{coding=[{system=http://snomed.info/sct, code=840539006, display=COVID-19}], text=COVID-19}",42
+"{coding=[{system=http://snomed.info/sct, code=386661006, display=Fever (finding)}], text=Fever (finding)}",37
+"{coding=[{system=http://snomed.info/sct, code=49727002, display=Cough (finding)}], text=Cough (finding)}",32
+"{coding=[{system=http://snomed.info/sct, code=36955009, display=Loss of taste (finding)}], text=Loss of taste (finding)}",23
+"{coding=[{system=http://snomed.info/sct, code=84229001, display=Fatigue (finding)}], text=Fatigue (finding)}",19
+"{coding=[{system=http://snomed.info/sct, code=444814009, display=Viral sinusitis (disorder)}], text=Viral sinusitis (disorder)}",19
+"{coding=[{system=http://snomed.info/sct, code=248595008, display=Sputum finding (finding)}], text=Sputum finding (finding)}",17
+"{coding=[{system=http://snomed.info/sct, code=57676002, display=Joint pain (finding)}], text=Joint pain (finding)}",8
+"{coding=[{system=http://snomed.info/sct, code=65363002, display=Otitis media}], text=Otitis media}",8
