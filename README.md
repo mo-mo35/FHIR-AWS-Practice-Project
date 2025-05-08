@@ -20,7 +20,7 @@ Deploy AWS resources using the provided script:
 cd infra
 chmod +x reproduce_pipeline.sh
 ./reproduce_pipeline.sh
-
+```
 ### 2. Queries
 
 From here I wrote some basic queries to create tables I thought may be useful in a real-world setting. These are saved under /athena_queries. 
