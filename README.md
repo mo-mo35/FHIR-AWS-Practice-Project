@@ -27,4 +27,4 @@ From here I wrote some basic queries to create tables I thought may be useful in
 
 ### 3. Visualizations
 
-I decided to use Jupyter Notebooks to customize my visualizations and export the tables. To see the graphs alone look under /visualizations, otherwise the tables in csv format and full notebook are under /notebooks
+I used Jupyter Notebooks to create some prototype visualizations before exporting my tables as CSV files to use PowerBI to create a final dashboard. The notebook and csv files are under /notebooks and the prototype graphs and final dashboard are under /visualizations
