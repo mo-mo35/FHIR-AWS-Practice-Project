@@ -9,6 +9,7 @@ This project builds a cloud-based analytics pipeline using AWS HealthLake, S3, G
 - Crawl and catalog the data with AWS Glue
 - Query with Athena using SQL
 - Analyze and visualize results in Jupyter using `awswrangler` and `pandas`
+- Finalize visualizations using PowerBI
 
 ## Setup
 
