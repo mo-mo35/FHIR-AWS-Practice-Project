@@ -18,7 +18,9 @@ HEALTHLAKE_ROLE="HealthLakeServiceRole"
 EXPORT_BUCKET="my-fhir-export-bucket"
 EXPORT_PREFIX="export"
 
-# KMS: (will be created by this script)
+# KMS:
+KMS_KEY_ARN=""  # Leave blank to create a new key, or paste an existing ARN here
+
 # GLUE
 GLUE_DATABASE="my_fhir_db"
 GLUE_CRAWLER="my_fhir_crawler"
@@ -31,11 +33,14 @@ GLUE_ROLE="GlueCrawlerRole"
 # 1) Create S3 bucket (no-op if already exists)
 aws s3 mb s3://$EXPORT_BUCKET --region $AWS_REGION
 
-# 2) Create a customer‑managed KMS key
-KMS_KEY_ARN=$(aws kms create-key \
-  --description "FHIR export key" \
-  --key-usage ENCRYPT_DECRYPT \
-  --query 'KeyMetadata.Arn' --output text)
+# 2) Create a customer-managed KMS key (only if not already set)
+if [ -z "$KMS_KEY_ARN" ]; then
+  KMS_KEY_ARN=$(aws kms create-key \
+    --description "FHIR export key" \
+    --key-usage ENCRYPT_DECRYPT \
+    --query 'KeyMetadata.Arn' --output text)
+  echo "Created KMS key: $KMS_KEY_ARN"
+fi
 
 # 3) Attach managed policies to HealthLake role
 aws iam attach-role-policy \
@@ -79,7 +84,7 @@ aws iam put-role-policy \
   --policy-document file://infra/s3-export-permissions.json
 
 # 5) Start the FHIR export job
-aws healthlake start-fhir-export-job \
+EXPORT_JOB_ID=$(aws healthlake start-fhir-export-job \
   --region $AWS_REGION \
   --datastore-id $DATASTORE_ID \
   --output-data-config "{
@@ -88,19 +93,34 @@ aws healthlake start-fhir-export-job \
       \"KmsKeyId\":\"$KMS_KEY_ARN\"
     }
   }" \
-  --data-access-role-arn arn:aws:iam::$AWS_ACCOUNT_ID:role/$HEALTHLAKE_ROLE
+  --data-access-role-arn arn:aws:iam::$AWS_ACCOUNT_ID:role/$HEALTHLAKE_ROLE \
+  --query 'ExportJobProperties.JobId' --output text)
+
+echo "Waiting for export job $EXPORT_JOB_ID to complete..."
+while true; do
+  STATUS=$(aws healthlake describe-fhir-export-job \
+    --datastore-id $DATASTORE_ID \
+    --job-id $EXPORT_JOB_ID \
+    --region $AWS_REGION \
+    --query 'ExportJobProperties.JobStatus' --output text)
+  echo "  Status: $STATUS"
+  if [ "$STATUS" = "COMPLETED" ]; then break; fi
+  if [ "$STATUS" = "FAILED" ]; then echo "Export job failed." && exit 1; fi
+  sleep 30
+done
+
 
 # 6) Create Glue catalog database
 aws glue create-database \
   --database-input "{\"Name\":\"$GLUE_DATABASE\"}" \
-  --region $AWS_REGION
+  --region $AWS_REGION 2>/dev/null || true
 
 # 7) Define Glue crawler
 aws glue create-crawler \
   --name $GLUE_CRAWLER \
   --role $GLUE_ROLE \
   --database-name $GLUE_DATABASE \
-  --targets "{\"S3Targets\":[{\"Path\":\"s3://$EXPORT_BUCKET/$EXPORT_PREFIX/\"}]}"
+  --targets "{\"S3Targets\":[{\"Path\":\"s3://$EXPORT_BUCKET/$EXPORT_PREFIX/\"}]}" 2>/dev/null || true
 
 # 8) Run the crawler
 aws glue start-crawler --name $GLUE_CRAWLER
