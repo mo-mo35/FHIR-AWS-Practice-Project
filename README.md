@@ -8,25 +8,6 @@ Built to demonstrate real-world healthcare data engineering patterns using AWS-n
 
 ## Architecture
 ![Pipeline Architecture](infra/architecture.png)
-```
-AWS HealthLake (FHIR Store)
-        │
-        │  Export (FHIR R4 JSON)
-        ▼
-   Amazon S3 (Raw Data Lake)
-        │
-        │  Crawl & Catalogue
-        ▼
-   AWS Glue (Data Catalog)
-        │
-        │  SQL Queries
-        ▼
-   Amazon Athena
-        │
-        ├──► Jupyter Notebooks (awswrangler + pandas → prototype visualisations)
-        │
-        └──► Power BI Dashboard (final interactive visualisations)
-```
 
 
 
