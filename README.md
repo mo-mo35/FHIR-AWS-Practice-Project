@@ -28,19 +28,7 @@ AWS HealthLake (FHIR Store)
         └──► Power BI Dashboard (final interactive visualisations)
 ```
 
----
 
-## Tech Stack
-
-| Layer | Tool |
-|---|---|
-| FHIR Data Store | AWS HealthLake |
-| Storage | Amazon S3 |
-| Cataloguing | AWS Glue Crawler |
-| Query Engine | Amazon Athena |
-| Analysis | Python (awswrangler, pandas), Jupyter |
-| Visualisation | Power BI |
-| Infrastructure | Bash (shell script) |
 
 ---
 
