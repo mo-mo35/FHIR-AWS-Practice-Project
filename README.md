@@ -148,6 +148,4 @@ Open the Power BI file in `/visualizations` using Power BI Desktop to view the f
 
 ---
 
-## Author
 
-Mohamed | [GitHub](https://github.com/mo-mo35) | B.S. Data Science, UC San Diego
