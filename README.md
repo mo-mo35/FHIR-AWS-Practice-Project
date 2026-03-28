@@ -7,7 +7,7 @@ Built to demonstrate real-world healthcare data engineering patterns using AWS-n
 ---
 
 ## Architecture
-
+![Pipeline Architecture](infra/architecture.png)
 ```
 AWS HealthLake (FHIR Store)
         │
