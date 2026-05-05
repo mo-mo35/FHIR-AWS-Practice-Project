@@ -1,0 +1,6 @@
+synthea.jar
+fhir.duckdb
+output/
+target/
+logs/
+dbt_packages/

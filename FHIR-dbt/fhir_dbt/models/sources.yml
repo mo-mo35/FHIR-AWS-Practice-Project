@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+    - name: fhir
+      schema: main
+      tables:
+        - name: conditions
+        - name: encounters
+        - name: patients
+        - name: medications 
+        - name: observations
+        - name: immunizations

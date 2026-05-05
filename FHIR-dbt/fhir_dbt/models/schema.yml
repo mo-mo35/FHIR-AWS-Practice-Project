@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: top_diagnoses
+    columns:
+      - name: condition
+        tests:
+          - not_null
+      - name: occurrences
+        tests:
+          - not_null
+
+  - name: high_utilizers
+    columns:
+      - name: patient_id
+        tests:
+          - not_null
+          - unique
+  - name: top_vaccines
+    columns:
+      - name: vaccine_type
+        tests:
+          - not_null
+      - name: total_administered
+        tests:
+          - not_null
+
+  - name: med_requests_by_drug
+    columns:
+      - name: drug
+        tests:
+          - not_null
+
+  - name: patient_comorbidity_by_age
+    columns:
+      - name: age_group
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['0-17', '18-35', '36-55', '56-75', '76+']

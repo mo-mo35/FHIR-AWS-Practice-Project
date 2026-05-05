@@ -1,32 +1,49 @@
-# FHIR Healthcare Analytics Pipeline on AWS
+# FHIR Healthcare Analytics Pipeline
 
-An end-to-end cloud data pipeline that ingests synthetic FHIR (Fast Healthcare Interoperability Resources) data into AWS HealthLake, transforms and catalogues it for SQL-based analysis, and delivers interactive dashboards via Power BI.
+An end-to-end healthcare data pipeline that ingests synthetic FHIR R4 patient data, transforms it using dbt, and delivers clinical analytics via Power BI.
 
-Built to demonstrate real-world healthcare data engineering patterns using AWS-native services.
+Originally built on AWS (HealthLake → S3 → Glue → Athena). Rebuilt locally using Synthea + DuckDB + dbt to demonstrate the same analytical layer without cloud infrastructure.
 
 ---
 
 ## Architecture
-![Pipeline Architecture](infra/architecture.png)
 
+### Cloud (Original)
+```
+Synthea → AWS HealthLake → S3 → Glue Crawler → Athena → Power BI
+```
+![Cloud Pipeline Architecture](infra/architecture.png)
 
+### Local (Reproducible)
+```
+Synthea → FHIR JSON → load_fhir.py → DuckDB → dbt → Power BI
+```
+![dbt Lineage DAG](infra/dbt-dag.png)
 
 ---
 
 ## Project Structure
 
 ```
-fhir-aws-pipeline/
+FHIR-AWS-Practice-Project/
 ├── infra/
-│   └── reproduce_pipeline.sh   # Provisions all AWS resources
-├── athena_queries/             # SQL queries for table creation and analysis
-├── notebooks/                  # Jupyter notebooks and exported CSV files
-└── visualizations/             # Prototype charts and final Power BI dashboard
+│   └── reproduce_pipeline.sh   # Provisions AWS resources (original)
+├── athena_queries/             # Original Athena SQL queries
+├── notebooks/                  # Jupyter notebooks and CSV exports
+├── visualizations/             # Power BI dashboard
+├── FHIR-dbt/                   # Local pipeline root
+│   ├── load_fhir.py            # Parses Synthea FHIR JSON → DuckDB
+│   ├── output/                 # Synthea-generated FHIR JSON (gitignored)
+│   └── fhir_dbt/               # dbt project
+│       ├── models/             # 10 SQL transformation models
+│       ├── seeds/              # CSV outputs from original Athena queries
+│       └── schema.yml          # Data quality tests
+└── .gitignore
 ```
 
 ---
 
-## Pipeline Overview
+## Cloud Pipeline Overview
 
 ### 1. Data Ingestion
 Synthetic FHIR R4 patient data is stored in AWS HealthLake and exported to an S3 bucket in JSON format. HealthLake handles FHIR-native validation and storage, making the data immediately queryable downstream.
@@ -40,7 +57,7 @@ Athena queries are written against the catalogued FHIR tables to extract clinica
 | Query | Description |
 |---|---|
 | `Average_LOS_per_Encounter.sql` | Average length of stay by encounter type (AMB / EMER / IMP) |
-| `Avg_BloodPressure_Over_Time.sql` | Average systolic blood pressure trend by year |
+| `Avg_BloodPressure_Over_Time.sql` | Average systolic blood pressure trend over time |
 | `Demographics_by_Gender_Age.sql` | Patient counts by age bracket and gender |
 | `Encounter_Volume_by_Day.sql` | Total encounters by day of week across the dataset |
 | `High_Utilizer_Cohort.sql` | Patients with the highest number of encounters |
@@ -93,59 +110,130 @@ The Power BI dashboard covers:
 
 ---
 
+## Local Pipeline Overview
+
+### 1. Data Generation
+Synthetic FHIR R4 patient data is generated locally using [Synthea](https://github.com/synthetichealth/synthea), producing 106 patients across 6 FHIR resource types as JSON bundles. No AWS account required.
+
+### 2. Parsing and Loading
+`load_fhir.py` reads each FHIR JSON bundle, flattens the nested resource structures, and loads six tables into a local DuckDB database:
+
+| Table | Records | Description |
+|---|---|---|
+| `patients` | 106 | Demographics — gender, DOB, location |
+| `conditions` | 3,094 | Diagnoses with onset dates |
+| `encounters` | 4,501 | Visit type, start and end timestamps |
+| `medications` | 2,171 | Medication requests with drug names |
+| `immunizations` | 37 | Vaccines administered with dates |
+| `observations` | 24,873 | Clinical measurements including blood pressure |
+
+### 3. Transformation with dbt
+10 dbt models replace the Glue + Athena layer, transforming raw FHIR sources into clinical analytics views using DuckDB as the query engine. Models mirror the original Athena queries with syntax translated from Presto SQL to DuckDB.
+
+| Model | Source Tables | Description |
+|---|---|---|
+| `top_diagnoses` | conditions | Most common diagnoses by occurrence count |
+| `repeat_visits` | encounters | Patients with multiple visits |
+| `high_utilizers` | encounters | Patients with highest encounter frequency |
+| `patient_comorbidity_by_age` | conditions, patients | Condition burden segmented by age group |
+| `encounter_volume_by_day` | encounters | Encounter counts by day of week |
+| `average_los_per_encounter` | encounters | Average length of stay by encounter type |
+| `demographics_by_gender_age` | patients | Patient counts by age bracket and gender |
+| `top_vaccines` | immunizations | Most frequently administered vaccines |
+| `med_requests_by_drug` | medications | Most frequently requested medications |
+| `average_blood_pressure` | observations | Average blood pressure trend over time |
+
+### 4. Data Quality Tests
+8 dbt tests validate the transformation layer — covering null checks, uniqueness constraints, and accepted value validation on clinical categories.
+
+```
+PASS=8 WARN=0 ERROR=0
+```
+
+### 5. Visualisation
+The same Power BI dashboard connects to the dbt model outputs, with CSVs exported from DuckDB replacing the original Athena exports as the data source.
+
+---
+
 ## Setup & Reproduction
 
-### Prerequisites
+### Run Locally (No AWS Required)
+
+**Prerequisites**
+- Python 3.8+
+- Java 21 (for Synthea — download from [adoptium.net](https://adoptium.net))
+- `pip install dbt-duckdb pandas duckdb`
+
+**1. Generate synthetic FHIR data**
+```bash
+java -jar synthea.jar -p 100
+```
+
+**2. Load into DuckDB**
+```bash
+python load_fhir.py
+```
+
+**3. Run dbt models and tests**
+```bash
+cd fhir_dbt
+dbt run
+dbt test
+```
+
+**4. View the dashboard**
+
+Open the Power BI file in `/visualizations` using Power BI Desktop.
+
+---
+
+### Run on AWS (Original)
+
+**Prerequisites**
 - AWS account with IAM permissions for HealthLake, S3, Glue, and Athena
-- AWS CLI configured locally (`aws configure`)
+- AWS CLI configured (`aws configure`)
 - Python 3.8+, with `awswrangler` and `pandas` installed
-- Power BI Desktop (for dashboard)
+- Power BI Desktop
 
-### 1. Deploy Infrastructure
-
+**1. Deploy infrastructure**
 ```bash
 cd infra
 chmod +x reproduce_pipeline.sh
 ./reproduce_pipeline.sh
 ```
 
-This script provisions the required AWS resources (S3 bucket, Glue Crawler, Athena workgroup) and triggers the HealthLake export.
+This provisions the S3 bucket, Glue Crawler, and Athena workgroup and triggers the HealthLake export.
 
-### 2. Run Athena Queries
+**2. Run Athena queries**
 
-Once the Glue Crawler has completed, open the queries in `/athena_queries` and run them in the Athena console or via `awswrangler` in the notebooks. These create analysis-ready tables from the raw FHIR export.
+Once the Glue Crawler has completed, open the queries in `/athena_queries` and run them in the Athena console or via `awswrangler` in the notebooks.
 
-### 3. Explore in Jupyter
-
+**3. Explore in Jupyter**
 ```bash
 pip install awswrangler pandas
 jupyter notebook notebooks/
 ```
 
-The notebooks connect to Athena, pull query results, and generate prototype visualisations.
+**4. View the dashboard**
 
-### 4. View the Dashboard
-
-Open the Power BI file in `/visualizations` using Power BI Desktop to view the final interactive dashboard.
+Open the Power BI file in `/visualizations` using Power BI Desktop.
 
 ---
 
 ## Key Skills Demonstrated
 
-- **Cloud data engineering** — end-to-end pipeline design on AWS
-- **Healthcare data standards** — working with FHIR R4 data structures
-- **SQL** — Athena queries for clinical reporting use cases
-- **Python** — data wrangling with pandas and awswrangler
-- **BI tooling** — dashboard delivery in Power BI
+- **Data engineering** — end-to-end pipeline design, cloud and local
+- **dbt** — modular SQL transformations, source definitions, data quality testing
+- **Healthcare data standards** — FHIR R4 data structures and clinical reporting
+- **DuckDB** — local OLAP query engine for analytical workloads
+- **AWS** — HealthLake, S3, Glue, Athena
+- **Python** — FHIR JSON parsing, pandas, data wrangling
+- **Power BI** — interactive clinical dashboard
 - **Infrastructure as code** — reproducible environment via shell script
 
 ---
 
 ## Notes
 
-- All patient data used in this project is **fully synthetic** — no real patient information is involved.
-- This project was built as a portfolio piece to demonstrate healthcare data engineering patterns, not for clinical or production use.
-
----
-
-
+- All patient data is **fully synthetic** — generated by [Synthea](https://github.com/synthetichealth/synthea). No real patient information is used.
+- Built as a portfolio project to demonstrate healthcare data engineering patterns, not for clinical or production use.
